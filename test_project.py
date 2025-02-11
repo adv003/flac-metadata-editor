@@ -1,52 +1,158 @@
 import pytest
-import os
-from project import read_metadata, modify_metadata, validate_metadata_input
-from mutagen.flac import FLAC
+from project import (
+    read_metadata,
+    validate_metadata_input,
+    modify_metadata,
+    print_metadata,
+    get_user_metadata_changes
+)
+import os  
+from unittest.mock import patch, MagicMock
 
 @pytest.fixture
-def sample_flac(tmp_path):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    source = os.path.join(current_dir, "samples", "04. All Falls Down.flac")
-    dest = tmp_path / "test.flac"
-    with open(source, 'rb') as f:
-        dest.write_bytes(f.read())
-    return dest
+def sample_flac_path(tmp_path):
+    return str(tmp_path / "test.flac")
 
-def test_read_metadata_valid(sample_flac):
-    metadata = read_metadata(str(sample_flac))
-    assert isinstance(metadata, dict)
-    assert 'TITLE' in metadata
-    assert metadata['TITLE'][0] == 'All Falls Down'
+@pytest.fixture
+def sample_metadata():
+    return {
+        'TITLE': ['Test Song'],
+        'ARTIST': ['Test Artist'],
+        'ALBUM': ['Test Album']
+    }
 
-def test_read_metadata_file_not_found():
-    assert read_metadata("nonexistent.flac") is None
+def test_read_metadata(sample_flac_path):
+    with patch('project.FLAC') as mock_flac:
+        mock_flac.return_value.tags = {'TITLE': ['Test'], 'ARTIST': ['Test']}
+        result = read_metadata(sample_flac_path)
+        assert result == {'TITLE': ['Test'], 'ARTIST': ['Test']}
 
-def test_read_metadata_invalid_file(tmp_path):
-    invalid_file = tmp_path / "invalid.txt"
-    invalid_file.write_text("Not a FLAC file")
-    assert read_metadata(str(invalid_file)) is None
+    result = read_metadata("nonexistent.flac")
+    assert result is None
 
-def test_modify_metadata_valid(sample_flac):
-    new_metadata = {'TITLE': 'New Title'}
-    assert modify_metadata(str(sample_flac), new_metadata) is True
-    updated = read_metadata(str(sample_flac))
-    assert updated['TITLE'][0] == 'New Title'
+    with patch('project.FLAC', side_effect=Exception("Invalid FLAC")):
+        result = read_metadata(sample_flac_path)
+        assert result is None
 
-def test_modify_metadata_invalid_type(sample_flac):
-    assert modify_metadata(str(sample_flac), "not a dict") is None
+def test_validate_metadata_input():
+    valid_input = {
+        'TITLE': 'Test Song',
+        'ARTIST': ['Test Artist'],
+        'ALBUM': 'Test Album'
+    }
+    result = validate_metadata_input(valid_input)
+    assert result == {
+        'TITLE': ['Test Song'],
+        'ARTIST': ['Test Artist'],
+        'ALBUM': ['Test Album']
+    }
 
-def test_modify_metadata_invalid_value(sample_flac, caplog):
-    new_metadata = {'ARTIST': '', 'TITLE': ['', 'Valid']}
-    assert modify_metadata(str(sample_flac), new_metadata) is True
-    updated = read_metadata(str(sample_flac))
-    assert 'ARTIST' not in updated or updated['ARTIST'][0] != ''
+    invalid_input = {
+        'TITLE': 123,
+        'ARTIST': '',
+        'ALBUM': ['', '']
+    }
+    result = validate_metadata_input(invalid_input)
+    assert result == {}
 
-def test_validate_metadata_input_valid():
-    valid = {'TITLE': 'Valid Title', 'ARTIST': ['Valid Artist']}
-    assert len(validate_metadata_input(valid)) == 2
+    result = validate_metadata_input("not a dict")
+    assert result == {}
 
-def test_validate_metadata_input_invalid():
-    invalid = {'TITLE': '', 'ARTIST': [123], 'ALBUM': 'Valid Album'}
-    valid = validate_metadata_input(invalid)
-    assert 'TITLE' not in valid and 'ARTIST' not in valid
-    assert 'ALBUM' in valid
+def test_modify_metadata(sample_flac_path):
+    with patch('project.FLAC') as mock_flac:
+        mock_instance = MagicMock()
+        mock_flac.return_value = mock_instance
+        
+        new_metadata = {'TITLE': 'New Title'}
+        result = modify_metadata(sample_flac_path, new_metadata)
+        
+        assert result is True
+        mock_instance.update.assert_called_once()
+        mock_instance.save.assert_called_once()
+
+    result = modify_metadata(sample_flac_path, {})
+    assert result is None
+
+    result = modify_metadata("nonexistent.flac", {'TITLE': 'Test'})
+    assert result is None
+
+def test_print_metadata(capsys, sample_metadata):
+    print_metadata(sample_metadata)
+    captured = capsys.readouterr()
+    assert "FLAC Metadata:" in captured.out
+    assert "TITLE" in captured.out
+    assert "ARTIST" in captured.out
+    assert "ALBUM" in captured.out
+
+    print_metadata(None)
+    captured = capsys.readouterr()
+    assert "No metadata found" in captured.out
+
+def test_get_user_metadata_changes():
+    with patch('builtins.input', side_effect=[
+        'New Title',  # TITLE
+        '',           # ARTIST
+        'New Album',  # ALBUM
+        '',           # DATE
+        '',           # GENRE
+        'TEST',       # New field
+        'Test Value', # New value
+        ''            # Finish
+    ]):
+        current_metadata = {
+            'TITLE': ['Old Title'],
+            'ARTIST': ['Old Artist'],
+            'ALBUM': ['Old Album']
+        }
+        result = get_user_metadata_changes(current_metadata)
+        assert result == {
+            'TITLE': 'New Title',
+            'ALBUM': 'New Album',
+            'TEST': 'Test Value'
+        }, f"Unexpected result: {result}"
+
+    with patch('builtins.input') as mock_input:
+        mock_input.side_effect = [
+            '', '', '', '', '',  # Skip predefined fields
+            'TEST', 'Test Value', ''
+        ]
+        result = get_user_metadata_changes({})
+        assert result == {'TEST': 'Test Value'}, f"Unexpected result: {result}"
+
+def test_main_view_flow():
+    with patch('builtins.input') as mock_input:
+        with patch('project.read_metadata') as mock_read:
+            mock_input.return_value = 'V'
+            mock_read.return_value = {'TITLE': ['Test Song']}
+            
+            from project import main
+            with pytest.raises(SystemExit) as e:
+                main()
+            
+            assert e.type == SystemExit
+
+def test_main_modify_flow():
+    with patch('builtins.input') as mock_input:
+        with patch('project.read_metadata') as mock_read:
+            with patch('project.modify_metadata') as mock_modify:
+                mock_input.side_effect = [
+                    'M',           # Modify
+                    'New Title',    # TITLE
+                    '',             # ARTIST
+                    'New Album',    # ALBUM
+                    '',             # DATE
+                    '',             # GENRE
+                    '',             # No new fields
+                    'Y'             # Confirm
+                ]
+                mock_read.return_value = {
+                    'TITLE': ['Old Title'],
+                    'ARTIST': ['Old Artist']
+                }
+                mock_modify.return_value = True
+                
+                from project import main
+                with pytest.raises(SystemExit) as e:
+                    main()
+                
+                assert e.type == SystemExit

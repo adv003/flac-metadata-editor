@@ -1,99 +1,63 @@
-FLAC Metadata Editor
-The FLAC Metadata Editor is a Python-based tool designed to read, modify, and save metadata in FLAC audio files. It uses the mutagen library for FLAC file handling and includes robust error handling, logging, and comprehensive testing using pytest.
+# FLAC Metadata Editor
 
-Features
-Read Metadata: Extract metadata from FLAC files, including artist, title, album, and more.
+#### Video Demo:  [Your Video URL Here]
 
-Modify Metadata: Update metadata fields with new values, ensuring input validation.
+## Description:
+The FLAC Metadata Editor is a Python-based tool designed to read, modify, and save metadata in FLAC audio files. The project was developed as part of the CS50P course and demonstrates how to work with file metadata using the `mutagen` library, while also showcasing robust error handling, logging, and testing with `pytest`.
 
-Error Handling: Gracefully handles file not found, invalid FLAC format, and unexpected errors.
+## Project Structure:
+- **project.py:**  
+  Contains the main function and all the core functions:
+    - `main()`: Entry point for the command-line interface.
+    - `read_metadata(file_path)`: Reads metadata from a FLAC file with robust error handling.
+    - `modify_metadata(file_path, new_metadata)`: Modifies and saves metadata with input validation and logging.
+    
+- **test_project.py:**  
+  Contains unit tests for all the custom functions. Each function has a corresponding test (prefixed with `test_`) to ensure it behaves as expected, even under error conditions.
+    
+- **requirements.txt:**  
+  Lists all pip-installable libraries required by the project (e.g., `mutagen`, `pytest`).
+    
+- **README.md:**  
+  This file, which explains the project, its functionalities, design decisions, and how to run the code.
+    
+- **samples/**  
+  Contains sample FLAC files used for testing and demonstration.
 
-Logging: Logs all operations and errors to both the console and a log file (flac_editor.log).
+## Key Features:
+- **Metadata Reading:**  
+  The project uses `mutagen` to extract metadata such as artist, title, and album from FLAC files.
+  
+- **Metadata Modification:**  
+  Users can update metadata fields via the command-line interface or by directly invoking functions. Input validation ensures only valid data is written.
+  
+- **Robust Error Handling:**  
+  The application handles various error scenarios such as file not found, invalid file format, and unexpected issues, logging errors for easier debugging.
+  
+- **Unit Testing:**  
+  Comprehensive tests have been written using `pytest` to ensure that both normal operation and error conditions are handled correctly.
 
-Testing: Includes unit tests for all core functionalities using pytest.
+## Design Choices:
+- **Error Handling & Logging:**  
+  By implementing detailed error handling and logging, the application provides meaningful feedback in the event of an error, improving the user experience and maintainability.
+    
+- **Modular Structure:**  
+  All functionality is contained in `project.py` and tested via `test_project.py`, keeping the project structure simple and organized.
+    
+- **Command-Line Interface:**  
+  A CLI was implemented (using `argparse`) to allow users to easily interact with the project, specifying file paths and metadata changes directly from the terminal.
 
-Installation
-Clone the Repository:
+## How to Run the Project:
+1. **Install Dependencies:**  
+   Run `pip install -r requirements.txt` to install all necessary libraries.
+    
+2. **Run the Project:**  
+   Execute `python project.py` in your terminal. The CLI will provide instructions for reading or modifying metadata.
+    
+3. **Run Tests:**  
+   Use `pytest test_project.py` to run the automated tests and ensure everything is working as expected.
 
-bash
-Copy
-git clone https://github.com/yourusername/flac-metadata-editor.git
-cd flac-metadata-editor
-Set Up a Virtual Environment:
+## Final Thoughts:
+This project was built as part of the CS50P course, demonstrating the use of Python for practical file manipulation and error handling. The thorough testing and logging practices implemented here reflect industry standards, ensuring a robust and user-friendly application.
 
-bash
-Copy
-python -m venv venv
-source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-Install Dependencies:
-
-bash
-Copy
-pip install -r requirements.txt
-Usage
-Reading Metadata
-To read metadata from a FLAC file, use the read_metadata function:
-
-python
-Copy
-from project import read_metadata
-
-metadata = read_metadata("samples/04. All Falls Down.flac")
-if metadata:
-    print(metadata)
-Modifying Metadata
-To update metadata in a FLAC file, use the modify_metadata function:
-
-python
-Copy
-from project import modify_metadata
-
-new_metadata = {
-    "TITLE": "New Title",
-    "ARTIST": "New Artist"
-}
-success = modify_metadata("samples/04. All Falls Down.flac", new_metadata)
-if success:
-    print("Metadata updated successfully!")
-Running Tests
-To run the unit tests, use the following command:
-
-bash
-Copy
-pytest
-Project Structure
-Copy
-project/
-  ├── project.py               # Main script with core functionalities
-  ├── test_project.py          # Unit tests for the project
-  ├── requirements.txt         # List of dependencies
-  ├── README.md                # This file
-  └── samples/                 # Sample FLAC files for testing
-       └── 04. All Falls Down.flac
-Error Handling and Logging
-File Not Found: Logs an error and returns None.
-
-Invalid FLAC Format: Logs an error and returns None.
-
-Unexpected Errors: Logs the exception with a stack trace and returns None.
-
-Logs: All logs are saved to flac_editor.log and printed to the console.
-
-Testing Details
-File Not Found: Ensures read_metadata returns None and logs the error.
-
-Invalid FLAC Format: Tests with non-FLAC or corrupted files.
-
-Unexpected Errors: Simulates scenarios like file permission issues.
-
-Valid File Operations: Tests reading and modifying metadata for valid files.
-
-Future Work
-Add command-line argument support using argparse.
-
-Implement batch editing, metadata export/import, and GUI support.
-
-License
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-Feel free to contribute to this project by opening issues or submitting pull requests!
+---
